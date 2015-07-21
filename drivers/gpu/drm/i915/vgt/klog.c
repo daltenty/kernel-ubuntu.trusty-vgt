@@ -28,7 +28,7 @@
 #include <linux/slab.h>
 
 /* maximum size of klog formatting buffer beyond which truncation will occur */
-#define KLOG_TMPBUF_SIZE (1024)
+#define KLOG_TMPBUF_SIZE (976)
 /* per-cpu klog formatting temporary buffer */
 static char klog_buf[NR_CPUS][KLOG_TMPBUF_SIZE];
 

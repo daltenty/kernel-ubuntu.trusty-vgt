@@ -520,9 +520,9 @@ bool vgt_reg_master_irq_handler(struct vgt_device *vgt,
 		 __vreg(vgt, reg), VGT_MMIO_READ(pdev, reg));
 
 	if (likely(vgt_track_nest) && !vgt->vgt_id &&
-		__get_cpu_var(in_vgt) != 1) {
+		__this_cpu_read(in_vgt) != 1) {
 		vgt_err("i915 virq happens in nested vgt context(%d)!!!\n",
-			__get_cpu_var(in_vgt));
+			__this_cpu_read(in_vgt));
 		ASSERT(0);
 	}
 
@@ -570,9 +570,9 @@ bool vgt_reg_ier_handler(struct vgt_device *vgt,
 		 __vreg(vgt, reg), VGT_MMIO_READ(pdev, reg));
 
 	if (likely(vgt_track_nest) && !vgt->vgt_id &&
-		__get_cpu_var(in_vgt) != 1) {
+		__this_cpu_read(in_vgt) != 1) {
 		vgt_err("i915 virq happens in nested vgt context(%d)!!!\n",
-			__get_cpu_var(in_vgt));
+			__this_cpu_read(in_vgt));
 		ASSERT(0);
 	}
 
@@ -798,7 +798,7 @@ static bool vgt_check_delay_event(void *timer)
 	int bit;
 
 	if (!vgt_delay_nest || !hypervisor_check_host()
-			|| !vgt_enabled || !__get_cpu_var(in_vgt))
+			|| !vgt_enabled || !__this_cpu_read(in_vgt))
 		return true;
 
 	if (timer == NULL) {
@@ -814,7 +814,7 @@ static bool vgt_check_delay_event(void *timer)
 		}
 	}
 
-	set_bit(bit, &__get_cpu_var(delay_event_bitmap));
+	set_bit(bit, this_cpu_ptr(&delay_event_bitmap));
 	return false;
 }
 
@@ -845,11 +845,11 @@ static void vgt_flush_delay_events(void)
 {
 	int bit;
 
-	for_each_set_bit(bit, &__get_cpu_var(delay_event_bitmap), BITS_PER_LONG) {
+	for_each_set_bit(bit, this_cpu_ptr(&delay_event_bitmap), BITS_PER_LONG) {
 		if (bit == next_avail_delay_event)
 			break;
 
-		clear_bit(bit, &__get_cpu_var(delay_event_bitmap));
+		clear_bit(bit, this_cpu_ptr(&delay_event_bitmap));
 
 		if (bit == 0) {
 			struct pgt_device *pdev = &default_device;
@@ -921,7 +921,7 @@ static void do_inject_dom0_virtual_interrupt(void *info, int ipi)
 		clear_bit(0, &pdev->dom0_ipi_irq_injecting);
 
 	/* still in vgt. the injection will happen later */
-	if (__get_cpu_var(in_vgt))
+	if (__this_cpu_read(in_vgt))
 		return;
 
 	spin_lock_irqsave(&pdev->lock, flags);
